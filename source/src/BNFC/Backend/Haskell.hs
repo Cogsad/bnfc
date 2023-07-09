@@ -16,6 +16,8 @@ import Text.Printf     (printf)
 import Text.PrettyPrint
 
 import BNFC.Backend.Agda
+import BNFC.Backend.Agda2HS
+
 import BNFC.Backend.Base
 import BNFC.Backend.Haskell.CFtoHappy
 import BNFC.Backend.Haskell.CFtoAlex3
@@ -39,9 +41,11 @@ import BNFC.Utils (when, table, getZonedTimeTruncatedToSeconds)
 
 
 -- | Entrypoint for the Haskell backend.
-
 makeHaskell :: SharedOptions -> CF -> Backend
-makeHaskell opts cf = do
+makeHaskell opts cf = if agda2hs opts then makeHaskell'' opts cf else makeHaskell' opts cf
+
+makeHaskell' :: SharedOptions -> CF -> Backend
+makeHaskell' opts cf = do
   -- Get current time in printable form.
   time <- liftIO $ show <$> getZonedTimeTruncatedToSeconds
 
@@ -91,6 +95,51 @@ makeHaskell opts cf = do
     -- Generate Makefile.
     Makefile.mkMakefile opts $ makefile opts cf
 
+makeHaskell'' :: SharedOptions -> CF -> Backend
+makeHaskell'' opts cf = do 
+
+    -- Get current time in printable form.
+    time <- liftIO $ show <$> getZonedTimeTruncatedToSeconds
+    let absMod = absFileM opts
+        lexMod = alexFileM opts
+        parMod = happyFileM opts
+        prMod  = printerFileM opts
+        layMod = layoutFileM opts
+        errMod = errFileM opts
+
+    -- Printfile
+    mkfile (printerFile opts) comment $ cf2Printer (tokenText opts) (functor opts) False prMod absMod cf 
+        -- Generate Alex lexer.  Layout is resolved after lexing.
+    case alexMode opts of
+      Alex3 -> do
+        mkfile (alexFile opts) commentWithEmacsModeHint $ cf2alex3 lexMod (tokenText opts) cf
+        liftIO $ printf "Use Alex 3 to compile %s.\n" (alexFile opts)
+        
+    Ctrl.when (hasLayout cf) $ mkfile (layoutFile opts) comment $
+      cf2Layout layMod lexMod cf
+    do
+      mkfile (happyFile opts) commentWithEmacsModeHint $
+        cf2Happy parMod absMod lexMod (glr opts) (tokenText opts) (functor opts) cf
+      -- liftIO $ printf "%s Tested with Happy 1.15\n" (happyFile opts)
+      mkfile (tFile opts) comment $ testfile opts cf
+
+    -- Both Happy parser and skeleton (template) rely on Err.
+    mkfile (errFile opts) comment $ mkErrM errMod
+    mkfile (templateFile opts) comment $ cf2Template (templateFileM opts) absMod (functor opts) cf
+
+    -- Generate txt2tags documentation.
+    mkfile (txtFile opts) t2tComment $ cfToTxt (lang opts) cf
+
+    -- Generate XML and DTD printers.
+    case xml opts of
+      2 -> makeXML opts True cf
+      1 -> makeXML opts False cf
+      _ -> return ()
+
+    -- Generate Agda2hs files
+    makeAgda2HS time opts cf
+
+    Makefile.mkMakefile opts $ makefile opts cf
 
 -- | Generate the makefile (old version, with just one "all" target).
 _oldMakefile

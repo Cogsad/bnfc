@@ -13,7 +13,7 @@ import Prelude hiding ((<>))
 import BNFC.CF
 import BNFC.PrettyPrint
 import BNFC.Utils                 ( ModuleName )
-import BNFC.Backend.Haskell.Utils ( catvars, noWarnUnusedMatches )
+import BNFC.Backend.Haskell.Utils ( catvars, noWarnUnusedMatches, genName )
 
 cf2Template :: ModuleName -> ModuleName -> Bool -> CF -> String
 cf2Template skelName absName functor cf = unlines $ concat
@@ -75,7 +75,7 @@ case_fun absName functor' cat xs = vcat
     cat' = pretty cat
     mkOne (cons, args) =
         let ns = catvars [render fname] args -- names False (map (checkRes .var) args) 1
-        in  qualify (text cons) <+> iffunctor "_" <+> hsep ns <+> "-> failure x"
+        in  qualify (genName cat' (text cons)) <+> iffunctor "_" <+> hsep ns <+> "-> failure x"
     qualify :: Doc -> Doc
     qualify
       | null absName = id

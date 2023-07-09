@@ -16,7 +16,7 @@ import Data.List (intersperse)
 
 import BNFC.CF
 import BNFC.Backend.Common.StrUtils (escapeChars)
-import BNFC.Backend.Haskell.Utils
+import BNFC.Backend.Haskell.Utils 
 import BNFC.Options (HappyMode(..), TokenText(..))
 import BNFC.PrettyPrint
 import BNFC.Utils
@@ -242,7 +242,7 @@ prRules absM functor = vsep . map prOne
     prOne (_ , []      ) = empty -- nt has only internal use
     prOne (nt, (p,a):ls) = vcat
         [ hsep [ nt', "::", "{", if functor then functorType' nt else type' nt, "}" ]
-        , hang nt' 2 $ sep (pr ":" (p, a) : map (pr "|") ls)
+        , hang nt' 2 $ sep (pr ":" (p , a) : map (pr "|") ls)
         ]
       where
         nt'          = text (identCat nt)
@@ -339,12 +339,12 @@ specialRules absName functor tokenText cf = unlines . intersperse "" . (`map` li
           case functor of
             False ->
               case isPositionCat cf tokenCat of
-                False -> qualify own ++ " $1"
-                True  -> qualify own ++ " (mkPosToken $1)"
+                False -> qualify (genName' own tokenCat) ++ " $1"
+                True  -> qualify (genName' own tokenCat) ++ " (mkPosToken $1)"
             True  ->
               case isPositionCat cf tokenCat of
-                False -> qualify own ++ " (tokenText $1)"
-                True  -> qualify own ++ " (mkPosToken $1)"
+                False -> qualify (genName' own tokenCat) ++ " (tokenText $1)"
+                True  -> qualify (genName' own tokenCat) ++ " (mkPosToken $1)"
     stringUnpack = tokenTextUnpack tokenText
     qualify
       | null absName = id

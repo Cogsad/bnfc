@@ -53,15 +53,23 @@ agdaASTFile
   , agdaLibFileM
   , agdaMainFile
   , agdaMainFileM
+  , agda2hsAbsFile
+  , agda2hsAbsFileM
+  , agda2hsMainFile 
+  , agda2hsMainFileM
  :: Options -> String
 agdaASTFile     = mkFile withLang "AST" "agda"
 agdaASTFileM    = mkMod  withLang "AST"
+agda2hsAbsFile  = mkFile withLang "Abs" "agda"
+agda2hsAbsFileM = mkMod  withLang "Abs"
 agdaParserFile  = mkFile withLang "Parser" "agda"
 agdaParserFileM = mkMod  withLang "Parser"
 agdaLibFile     = mkFile noLang   "IOLib" "agda"
 agdaLibFileM    = mkMod  noLang   "IOLib"
 agdaMainFile    = mkFile noLang   "Main" "agda"
 agdaMainFileM   = mkMod  noLang   "Main"
+agda2hsMainFile    = mkFile noLang   "Test" "agda" -- maybe use these later
+agda2hsMainFileM   = mkMod  noLang   "Test"
 
 
 noLang :: Options -> String -> String

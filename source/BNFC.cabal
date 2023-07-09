@@ -260,6 +260,7 @@ library
 
     -- Agda backend
     BNFC.Backend.Agda
+    BNFC.Backend.Agda2HS
 
 ----- Testing --------------------------------------------------------------
 

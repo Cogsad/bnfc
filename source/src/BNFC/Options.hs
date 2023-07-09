@@ -138,6 +138,7 @@ data SharedOptions = Options
   , glr           :: HappyMode   -- ^ Happy option @--glr@.
   , xml           :: Int         -- ^ Options @--xml@, generate DTD and XML printers.
   , agda          :: Bool        -- ^ Option @--agda@. Create bindings for Agda?
+  , agda2hs       :: Bool        -- ^ Option @--agda2hs@. Create bindings for Agda2hs
   --- OCaml specific
   , ocamlParser   :: OCamlParser -- ^ Option @--menhir@ to switch to @Menhir@.
   --- Java specific
@@ -172,6 +173,7 @@ defaultOptions = Options
   , glr             = Standard
   , xml             = 0
   , agda            = False
+  , agda2hs         = False
   -- OCaml specific
   , ocamlParser     = OCamlYacc
   -- Java specific
@@ -232,6 +234,8 @@ printOptions opts = unwords . concat $
   , [ "--xml"             | xml opts == 1                       ]
   , [ "--xmlt"            | xml opts == 2                       ]
   , [ "--agda"            | agda opts                           ]
+  , [ "--agda2hs"         | agda opts                           ]
+
   -- C# options:
   , [ "--vs"              | visualStudio opts                   ]
   , [ "--wfc"             | wcf opts                            ]
@@ -384,6 +388,9 @@ specificOptions =
   -- Agda does not support the GADT syntax
   , ( Option []    ["agda"] (NoArg (\o -> o { agda = True, tokenText = TextToken }))
           "Also generate Agda bindings for the abstract syntax"
+    , [TargetHaskell] )
+  , ( Option []    ["agda2hs"] (NoArg (\o -> o { agda2hs = True, tokenText = TextToken }))
+          "Also generate Agda2HS bindings for the abstract syntax"
     , [TargetHaskell] )
   ]
 
@@ -630,6 +637,7 @@ translateOldOptions = mapM $ \ o -> do
   where
   translation = Map.fromList $
     [ ("-agda"         , "--agda")
+    , ("-agda2hs"      , "--agda2hs")
     , ("-java"         , "--java")
     , ("-java1.5"      , "--java")
     , ("-c"            , "--c")

@@ -13,10 +13,14 @@ module BNFC.Backend.Haskell.Utils
   , catToVar, catvars
   , tokenTextImport, tokenTextType
   , tokenTextPack, tokenTextPackParens, tokenTextUnpack
+  , extractModName
+  , genName
+  , genName'
   ) where
 
 import Data.Char
 import Data.String (IsString)
+import Data.List   (intercalate)
 
 import BNFC.PrettyPrint
 import qualified BNFC.PrettyPrint as P
@@ -259,3 +263,22 @@ catvars rs = map text . mkNames (rs ++ hsReservedWords) LowerCase . map var
   where
     var (ListCat c) = var c ++ "s"
     var c           = catToStr c
+
+
+extractModName :: String -> String
+extractModName s = case (splitter (=='.') s) of
+                      [] -> ""
+                      xs -> (intercalate "." $ init xs) ++ "."
+  where
+    splitter :: (Char -> Bool) -> String -> [String]
+    splitter p s = case dropWhile p s of 
+        "" -> []
+        s' -> w : splitter p ss'
+          where (w, ss') = break p s'
+
+-- ^ This is needed for renaming the constructors according to agda-naming of constructors.
+genName :: Doc -> Doc -> Doc
+genName cat cons = if cat == cons then cons Prelude.<> "'" else cons
+
+genName' :: String -> String -> String
+genName' cat cons = if cat == cons then cons Prelude.<> "'" else cons

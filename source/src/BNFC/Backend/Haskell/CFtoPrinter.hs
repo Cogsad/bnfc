@@ -223,6 +223,7 @@ showsPrintRule absMod _cf t =
   , "  prt _ x = doc (shows x)"
   , ""
   ]
+  
 
 -- | Print category (data type name) qualified if user-defined.
 --
@@ -250,11 +251,14 @@ identRule absMod tokenText cf = ownPrintRule absMod tokenText cf catIdent
 ownPrintRule :: AbsMod -> TokenText -> CF -> TokenCat -> [Doc]
 ownPrintRule absMod tokenText cf own =
   [ "instance Print" <+> q <+> "where"
-  , "  prt _ (" <> q <+> posn <> ") = doc $ showString" <+> text (tokenTextUnpack tokenText "i")
+  , "  prt _ (" <> q' <+> posn <> ") = doc $ showString" <+> text (tokenTextUnpack tokenText "i")
   ]
  where
    q    = text $ qualifiedCat absMod $ TokenCat own
    posn = if isPositionCat cf own then "(_,i)" else "i"
+   -- | These are needed for the agda2hs constructor renaming
+   q'   = text $ qualifiedCat absMod $ TokenCat own'  
+   own' = if own `elem` literals cf then own ++ "'" else own
 
 -- | Printing rules for the AST nodes.
 rules :: AbsMod -> Bool -> CF -> [Doc]
