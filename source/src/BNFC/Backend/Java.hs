@@ -57,14 +57,21 @@ import BNFC.PrettyPrint
 
 -- | This creates the Java files.
 makeJava :: SharedOptions -> CF -> MkFiles ()
-makeJava opt = makeJava' opt{ lang = mkName javaReserved SnakeCase $ lang opt }
+makeJava opt = makeJava' pkg opt{ lang = lang' }
   -- issue #212: make a legal package name, see also
   -- https://docs.oracle.com/javase/tutorial/java/package/namingpkgs.html
+  where
+    pkg   = mkName javaReserved SnakeCase $ lang opt
+    lang' = capitalize $ mkName javaReserved CamelCase $ lang opt
 
-makeJava' :: SharedOptions -> CF -> MkFiles ()
-makeJava' options@Options{..} cf = do
+makeJava' ::
+     String         -- ^ Legal package name derived from language name.
+  -> SharedOptions
+  -> CF
+  -> MkFiles ()
+makeJava' pkg options@Options{..} cf = do
      -- Create the package directories if necessary.
-    let packageBase  = maybe id (+.+) inPackage lang
+    let packageBase  = maybe id (+.+) inPackage pkg
         packageAbsyn = packageBase +.+ "Absyn"
         dirBase      = pkgToDir packageBase
         dirAbsyn     = pkgToDir packageAbsyn
@@ -111,7 +118,7 @@ makeJava' options@Options{..} cf = do
        else "   (Parser created only for category " ++ prettyShow (firstEntry cf) ++ ")"
     liftIO $ putStrLn $ "   (Tested with"  +++ toolname parmake
                                            +++ toolversion parmake ++ ")"
-    Makefile.mkMakefile options $
+    Makefile.mkMakefile optMake $
         makefile dirBase dirAbsyn absynFileNames parselexspec
   where
     remDups [] = []
@@ -314,7 +321,8 @@ antlrtest = javaTest $ JavaTestParams
       | normCat x /= x = showOpts xs
       | otherwise      = text (firstLowerCase $ identCat x) : showOpts xs
 
-parserLexerSelector :: String
+parserLexerSelector ::
+       String
     -> JavaLexerParser
     -> RecordPositions -- ^Pass line numbers to the symbols
     -> ParserLexerSpecification
@@ -348,24 +356,24 @@ data CFToLexer = CF2Lex
     }
 
 -- | Instances of cf-lexergen bridges
-cf2JLex, cf2JFlex :: RecordPositions -> CFToLexer
 
+cf2JLex :: RecordPositions -> CFToLexer
 cf2JLex rp = CF2Lex
-       { cf2lex           = BNFC.Backend.Java.CFtoJLex15.cf2jlex JLexCup rp
-       , makelexerdetails = jlexmakedetails
-       }
+  { cf2lex           = cf2jlex JLexCup rp
+  , makelexerdetails = jlexmakedetails
+  }
 
+cf2JFlex :: RecordPositions -> CFToLexer
 cf2JFlex rp = CF2Lex
-       { cf2lex           = BNFC.Backend.Java.CFtoJLex15.cf2jlex JFlexCup rp
-       , makelexerdetails = jflexmakedetails
-       }
+  { cf2lex           = cf2jlex JFlexCup rp
+  , makelexerdetails = jflexmakedetails
+  }
 
 cf2AntlrLex' :: String -> CFToLexer
 cf2AntlrLex' l = CF2Lex
-               { cf2lex           =
-                   BNFC.Backend.Java.CFtoAntlr4Lexer.cf2AntlrLex
-               , makelexerdetails = antlrmakedetails $ l++"Lexer"
-               }
+  { cf2lex           = const $ cf2AntlrLex l
+  , makelexerdetails = antlrmakedetails $ l ++ "Lexer"
+  }
 
 -- | CF -> PARSER GENERATION TOOL BRIDGE
 -- | function translating the CF to an appropriate parser generation tool.
@@ -380,16 +388,15 @@ data CFToParser = CF2Parse
 -- | Instances of cf-parsergen bridges
 cf2cup :: RecordPositions -> CFToParser
 cf2cup rp = CF2Parse
-    { cf2parse          = BNFC.Backend.Java.CFtoCup15.cf2Cup
+    { cf2parse          = cf2Cup
     , makeparserdetails = cupmakedetails rp
     }
 
 cf2AntlrParse' :: String -> CFToParser
 cf2AntlrParse' l = CF2Parse
-                { cf2parse          =
-                    BNFC.Backend.Java.CFtoAntlr4Parser.cf2AntlrParse
-                , makeparserdetails = antlrmakedetails $ l++"Parser"
-                }
+  { cf2parse          = const $ cf2AntlrParse l
+  , makeparserdetails = antlrmakedetails $ l ++ "Parser"
+  }
 
 
 -- | shorthand for Makefile command running javac or java
@@ -406,44 +413,39 @@ type OutputDirectory = String
 
 -- | Makefile details from running the parser-lexer generation tools.
 data MakeFileDetails = MakeDetails
-    { -- | The string that executes the generation tool
+    { -- | The string that executes the generation tool.
       executable          :: String
-      -- | Flags to pass to the tool
-    , flags               :: OutputDirectory -> String
-      -- | Input file to the tool
-    , filename            :: String
-      -- | Extension of input file to the tool
-    , fileextension       :: String
-      -- | name of the tool
-    , toolname            :: String
-      -- | Tool version
-    , toolversion         :: String
-      -- | true if the tool is a parser and supports entry points,
-      -- false otherwise
-    , supportsEntryPoints :: Bool
-      -- | list of names (without extension!) of files resulting from the
-      -- application of the tool which are relevant to a make rule
-    , results             :: [String]
-      -- | list of names of files resulting from the application of
-      -- the tool which are irrelevant to the make rules but need to
-      -- be cleaned
-    , other_results       :: [String]
-      -- | if true, the files are moved to the base directory, otherwise
-      -- they are left where they are
-    , moveresults         :: Bool
+    , -- | Flags to pass to the tool.
+      flags               :: OutputDirectory -> String
+    , -- | Input file to the tool.
+      filename            :: String
+    , -- | Extension of input file to the tool.
+      fileextension       :: String
+    , -- | Name of the tool.
+      toolname            :: String
+    , -- | Tool version.
+      toolversion         :: String
+    , -- | True if the tool is a parser and supports entry points,
+      --   False otherwise.
+      supportsEntryPoints :: Bool
+    , -- | List of names (without extension!) of files resulting from the
+      --   application of the tool which are relevant to a make rule.
+      results             :: [String]
+    , -- | List of names of files resulting from the application of
+      --   the tool which are irrelevant to the make rules but need to be cleaned.
+      other_results       :: [String]
+    , -- | If True, the files are moved to the base directory, otherwise
+      -- they are left where they are.
+      moveresults         :: Bool
     }
 
 
-mapEmpty :: a -> String
-mapEmpty _ = ""
-
 -- Instances of makefile details.
-jflexmakedetails, jlexmakedetails :: MakeFileDetails
-cupmakedetails :: RecordPositions -> MakeFileDetails
 
+jlexmakedetails :: MakeFileDetails
 jlexmakedetails = MakeDetails
     { executable          = runJava "JLex.Main"
-    , flags               = mapEmpty
+    , flags               = const ""
     , filename            = "Yylex"
     , fileextension       = ""
     , toolname            = "JLex"
@@ -454,12 +456,14 @@ jlexmakedetails = MakeDetails
     , moveresults         = False
     }
 
+jflexmakedetails :: MakeFileDetails
 jflexmakedetails = jlexmakedetails
     { executable  = "jflex"
     , toolname    = "JFlex"
-    , toolversion = "1.4.3 - 1.7.0"
+    , toolversion = "1.4.3 - 1.9.1"
     }
 
+cupmakedetails :: RecordPositions -> MakeFileDetails
 cupmakedetails rp = MakeDetails
     { executable          = runJava "java_cup.Main"
     , flags               = const (lnFlags ++ " -expect 100")
@@ -501,8 +505,10 @@ antlrmakedetails l = MakeDetails
     , moveresults         = False
     }
 
-dotJava, dotClass :: [String] -> [String]
+dotJava :: [String] -> [String]
 dotJava  = map (<.> "java")
+
+dotClass :: [String] -> [String]
 dotClass = map (<.> "class")
 
 type CFToJava = String -> String -> CF -> String
@@ -605,7 +611,7 @@ javaTest (JavaTestParams
                   ]
                 , [ invocation px (text packageAbsyn) dat absentity
                   , printOuts
-                     [ "\"Parse Succesful!\""
+                     [ "\"Parse Successful!\""
                      , "\"[Abstract Syntax]\""
                      , "PrettyPrinter.show(ast)"
                      , "\"[Linearized Tree]\""

@@ -93,7 +93,7 @@ makeHaskell' opts cf = do
     Ctrl.when (agda opts) $ makeAgda time opts cf
 
     -- Generate Makefile.
-    Makefile.mkMakefile opts $ makefile opts cf
+    Makefile.mkMakefile (optMake opts) $ makefile opts cf
 
 makeHaskell'' :: SharedOptions -> CF -> Backend
 makeHaskell'' opts cf = do 
@@ -289,7 +289,7 @@ makefile opts cf makeFile = vcat
   bnfcRule :: Doc
   bnfcRule = Makefile.mkRule tgts [ lbnfFile opts ] [ recipe ]
     where
-    recipe    = unwords [ "bnfc", printOptions opts{ make = Nothing } ]
+    recipe    = unwords [ "bnfc", printOptions opts{ optMake = Nothing } ]
     tgts      = unwords . map ($ opts) . concat $
       [ [ absFile ]
       , [ layoutFile | lay ]

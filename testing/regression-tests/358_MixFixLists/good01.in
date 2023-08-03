@@ -1,3 +1,4 @@
+'\t'
 {
 - 1;
 - 2;
@@ -11,8 +12,10 @@ foo
 "A".
 "B".
 "QED".
+"line1\n\tline2".
+"\"%s\" is not an int".
 semi-exprs:
 1+1;
 2+2;
 comma-exprs: 3, (4+4),
-chars: 'A' !, 'B'! , 'C'.
+chars: 'A' !, 'B'! , 'C' ! , '\t'.

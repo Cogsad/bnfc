@@ -47,7 +47,7 @@ type MetaVar     = (String, Cat)
 -- | Creates the ANTLR parser grammar for this CF.
 --The environment comes from CFtoAntlr4Lexer
 cf2AntlrParse :: String -> String -> CF -> RecordPositions -> KeywordEnv -> String
-cf2AntlrParse packageBase packageAbsyn cf _ env = unlines $ concat
+cf2AntlrParse lang packageAbsyn cf _ env = unlines $ concat
   [ [ header
     , tokens
     , ""
@@ -62,15 +62,14 @@ cf2AntlrParse packageBase packageAbsyn cf _ env = unlines $ concat
     header :: String
     header = unlines
         [ "// Parser definition for use with ANTLRv4"
-        , "parser grammar" +++ identifier ++ "Parser;"
+        , "parser grammar" +++ lang ++ "Parser;"
         ]
     tokens :: String
     tokens = unlines
         [ "options {"
-        , "  tokenVocab = "++identifier++"Lexer;"
+        , "  tokenVocab = " ++ lang ++ "Lexer;"
         , "}"
         ]
-    identifier = getLastInPackage packageBase
 
 -- | Generate start rule to help ANTLR.
 --
@@ -138,19 +137,17 @@ generateAction packageAbsyn nt f ms rev
      p_1               = resultvalue $ ms!!0
      p_2               = resultvalue $ ms!!1
      add               = if rev then "addLast" else "addFirst"
-     gettext           = "getText()"
-     removeQuotes x    = "substring(1, "++ x +.+ gettext +.+ "length()-1)"
-     parseint x        = "Integer.parseInt("++x++")"
-     parsedouble x     = "Double.parseDouble("++x++")"
-     charat            = "charAt(1)"
+     removeQuotes x    = x +.+ "substring(1, " ++ x +.+ "length()-1)"
+     unescape x        = removeQuotes x +.+ "translateEscapes()"  -- Java 15 and higher
      resultvalue (n,c) = case c of
-                          TokenCat "Ident"   -> n'+.+gettext
-                          TokenCat "Integer" -> parseint $ n'+.+gettext
-                          TokenCat "Char"    -> n'+.+gettext+.+charat
-                          TokenCat "Double"  -> parsedouble $ n'+.+gettext
-                          TokenCat "String"  -> n'+.+gettext+.+removeQuotes n'
-                          _         -> (+.+) n' (if isTokenCat c then gettext else "result")
-                          where n' = '$':n
+                          TokenCat "Double"  -> concat [ "Double.parseDouble(", txt, ")" ]
+                          TokenCat "Integer" -> concat [ "Integer.parseInt("  , txt, ")" ]
+                          TokenCat "Char"    -> unescape txt +.+ "charAt(0)"
+                          TokenCat "String"  -> unescape txt
+                          TokenCat "Ident"   -> txt
+                          c | isTokenCat c   -> txt
+                            | otherwise      -> concat [ "$", n, ".result" ]
+                          where txt = '$':n +.+ "getText()"
 
 -- | Generate patterns and a set of metavariables indicating
 -- where in the pattern the non-terminal

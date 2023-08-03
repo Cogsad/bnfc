@@ -18,6 +18,7 @@ module BNFC.Utils
     , (+++), (++++), (+-+), (+.+), parensIf
     , pad, table
     , mkName, mkNames, NameStyle(..)
+    , capitalize
     , lowerCase, upperCase, mixedCase
     , camelCase, camelCase_
     , snakeCase, snakeCase_
@@ -365,7 +366,11 @@ mkName reserved style s = notReserved name'
         MixedCase -> mapHead toLower $ concatMap capitalize tokens
         SnakeCase -> map toLower $ intercalate "_" tokens
         OrigCase  -> s
-    capitalize = mapHead toUpper
+
+-- | Make first letter uppercase.
+--
+capitalize :: String -> String
+capitalize = mapHead toUpper
 
 -- | Same as above but accept a list as argument and make sure that the
 -- names generated are uniques.
@@ -396,16 +401,16 @@ disambiguateNames = disamb []
 -- >>> parseIdent "abc"
 -- ["abc"]
 --
--- >>> parseIdent "Abc"
+-- >>> parseIdent "Abc123"
 -- ["Abc"]
 --
 -- >>> parseIdent "WhySoSerious"
 -- ["Why","So","Serious"]
 --
--- >>> parseIdent "why_so_serious"
+-- >>> parseIdent "why_so_serious_123"
 -- ["why","so","serious"]
 --
--- >>> parseIdent "why-so-serious"
+-- >>> parseIdent "why-so-serious123"
 -- ["why","so","serious"]
 --
 -- Some corner cases:
